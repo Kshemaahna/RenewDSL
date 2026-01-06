@@ -1,0 +1,110 @@
+?start: statement+
+
+statement: site_def
+         | equipment_def
+         | layout_def
+         | simulate_def
+         | optimize_def
+
+// Site Definition
+site_def: "site" string ":" NEWLINE INDENT site_attr+ DEDENT
+
+site_attr: "location" ":" coordinate NEWLINE
+         | "area" ":" quantity NEWLINE
+         | "terrain" ":" string NEWLINE
+         | "irradiance" ":" quantity NEWLINE
+         | "elevation" ":" quantity NEWLINE
+
+coordinate: number "°" ("N"|"S") "," number "°" ("E"|"W")
+
+// Equipment Definition
+equipment_def: "equipment" ":" NEWLINE INDENT equipment_item+ DEDENT
+
+equipment_item: equipment_type string ("from" "catalog")? NEWLINE (INDENT equipment_spec+ DEDENT)?
+
+equipment_type: "panel" | "inverter" | "turbine" | "battery"
+
+equipment_spec: IDENTIFIER ":" (quantity | number | string) NEWLINE
+
+// Layout Definition
+layout_def: "layout" string ":" NEWLINE INDENT layout_attr+ DEDENT
+
+layout_attr: "panels" ":" equipment_ref NEWLINE
+           | "inverters" ":" equipment_ref NEWLINE
+           | "turbines" ":" equipment_ref NEWLINE
+           | "orientation" ":" direction NEWLINE
+           | "tilt" ":" angle NEWLINE
+           | "row_spacing" ":" quantity NEWLINE
+           | "tracking" ":" tracking_mode NEWLINE
+           | "count" ":" number NEWLINE
+
+equipment_ref: IDENTIFIER ("*" number)?
+
+direction: "south" | "north" | "east" | "west" | angle
+
+tracking_mode: "fixed" | "single_axis" | "dual_axis"
+
+// Simulation Definition
+simulate_def: "simulate" ":" NEWLINE INDENT simulate_attr+ DEDENT
+
+simulate_attr: "weather" ":" weather_source NEWLINE
+             | "duration" ":" duration NEWLINE
+             | "timestep" ":" duration NEWLINE
+             | "outputs" ":" output_list NEWLINE
+
+weather_source: IDENTIFIER "(" string ("," string)* ")"
+
+output_list: "[" output_name ("," output_name)* "]"
+
+output_name: "generation" | "losses" | "capacity_factor" | "energy" | "power"
+
+// Optimization Definition
+optimize_def: "optimize" ":" NEWLINE INDENT optimize_attr+ DEDENT
+
+optimize_attr: "objective" ":" objective_expr NEWLINE
+             | "variables" ":" variable_list NEWLINE
+             | "constraints" ":" constraint_list NEWLINE
+             | "algorithm" ":" string NEWLINE
+
+objective_expr: ("maximize" | "minimize") "(" IDENTIFIER ")"
+
+variable_list: "[" IDENTIFIER ("," IDENTIFIER)* "]"
+
+constraint_list: "[" constraint ("," constraint)* "]"
+
+constraint: IDENTIFIER COMPARISON (number | quantity)
+
+// Basic Types
+quantity: number unit
+
+unit: DISTANCE_UNIT | AREA_UNIT | POWER_UNIT | ENERGY_UNIT | TIME_UNIT | ANGLE_UNIT
+
+DISTANCE_UNIT: "m" | "km" | "ft" | "mi"
+AREA_UNIT: "m²" | "hectares" | "acres" | "km²"
+POWER_UNIT: "W" | "kW" | "MW" | "GW"
+ENERGY_UNIT: "Wh" | "kWh" | "MWh" | "GWh" | "kWh/m²/day"
+TIME_UNIT: "s" | "min" | "h" | "hour" | "day" | "year"
+ANGLE_UNIT: "°" | "deg" | "rad"
+
+angle: number "°"
+
+duration: number TIME_UNIT
+        | number TIME_UNIT "s"?
+
+string: ESCAPED_STRING
+
+number: SIGNED_NUMBER
+
+COMPARISON: "<" | ">" | "<=" | ">=" | "==" | "="
+
+IDENTIFIER: /[a-zA-Z_][a-zA-Z0-9_]*/
+
+%import common.ESCAPED_STRING
+%import common.SIGNED_NUMBER
+%import common.WS
+%import common.NEWLINE
+
+%ignore WS
+
+INDENT: /<INDENT>/
+DEDENT: /<DEDENT>/
